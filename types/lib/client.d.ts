@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from 'mqtt-packet'
+import { IAuthPacket, Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -223,6 +223,15 @@ export declare class MqttClient extends events.EventEmitter {
    * @api public
    */
   public handleMessage (packet: Packet, callback: PacketCallback): void
+
+  /**
+   * Handler to handle auth packages to implement mqtt5 enhanced auth procedures
+   *
+   * @param packet the auth packet to handle
+   * @param callback call when finished
+   * @api public
+   */
+  public handleAuth (packet: IAuthPacket, callback: PacketCallback): void
 
   /**
    * getLastMessageId
