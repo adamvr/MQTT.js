@@ -113,6 +113,10 @@ export interface IClientOptions extends ISecureClientOptions {
     userProperties?: UserProperties,
     authenticationMethod?: string,
     authenticationData?: Buffer
+  },
+  serverProperties?: {
+    maximumPacketSize?: number,
+    topicAliasMaximum?: number,
   }
 }
 export interface ISecureClientOptions {
