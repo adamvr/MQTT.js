@@ -11,6 +11,8 @@ var Store = require('./../lib/store')
 var assert = require('chai').assert
 var ports = require('./helpers/port_list')
 var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
+var fs = require('fs')
+var levelStore = require('mqtt-level-store')
 
 module.exports = function (server, config) {
   var version = config.protocolVersion || 4
@@ -649,6 +651,77 @@ module.exports = function (server, config) {
         })
         client.publish('test', 'payload1', {qos: 2})
         client.publish('test', 'payload2', {qos: 2})
+      })
+    })
+
+    it('should not overtake the messages stored in the level-db-store', function (done) {
+      var storePath = './temp'
+      var store = levelStore(storePath)
+      var client = null
+      var incomingStore = store.incoming
+      var outgoingStore = store.outgoing
+      var publishCount = 0
+
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
+        serverClient.on('connect', function () {
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
+        })
+        serverClient.on('publish', function (packet) {
+          if (packet.qos !== 0) {
+            serverClient.puback({messageId: packet.messageId})
+          }
+
+          switch (publishCount++) {
+            case 0:
+              assert.strictEqual(packet.payload.toString(), 'payload1')
+              break
+            case 1:
+              assert.strictEqual(packet.payload.toString(), 'payload2')
+              break
+            case 2:
+              assert.strictEqual(packet.payload.toString(), 'payload3')
+
+              server2.close()
+              fs.rmdirSync(storePath, {recursive: true})
+              done()
+              break
+          }
+        })
+      })
+
+      const clientOptions = {
+        port: ports.PORTAND72,
+        host: 'localhost',
+        clean: false,
+        clientId: 'cid1',
+        reconnectPeriod: 0,
+        incomingStore: incomingStore,
+        outgoingStore: outgoingStore,
+        queueQoSZero: true
+      }
+
+      server2.listen(ports.PORTAND72, function () {
+        client = connect(clientOptions)
+
+        client.once('close', function () {
+          client.once('connect', function () {
+            client.publish('test', 'payload2', {qos: 1})
+            client.publish('test', 'payload3', {qos: 1}, function () {
+              client.end(false)
+            })
+          })
+          // reconecting
+          client.reconnect(clientOptions)
+        })
+
+        // publish and close
+        client.publish('test', 'payload1', {
+          qos: 1,
+          cbStorePut: function () {
+            client.end(true)
+          }
+        })
       })
     })
 

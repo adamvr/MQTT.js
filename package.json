@@ -100,7 +100,8 @@
     "tslint": "^5.11.0",
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.2.2",
-    "uglify-es": "^3.3.9"
+    "uglify-es": "^3.3.9",
+    "mqtt-level-store": "^3.1.0"
   },
   "standard": {
     "env": [
